@@ -225,13 +225,13 @@ function learnWithLimdu(json){
   };
   
   //Шинж чанаруудаар нь ангилах 
-  var intentClassifier = new limdu.classifiers.EnhancedClassifier({
+  limduClassifier = new limdu.classifiers.EnhancedClassifier({
   	classifierType: TextClassifier,
   	featureExtractor: WordExtractor
   });
   
   // Суралцах туршилт эхлүүлэх
-  intentClassifier.trainBatch(json);
+  limduClassifier.trainBatch(json);
   
 }
 //limdu ашиглан хариулах
