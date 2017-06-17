@@ -30,7 +30,8 @@ var Neuron = synaptic.Neuron,
   	Network = synaptic.Network,
   	Trainer = synaptic.Trainer,
   	Architect = synaptic.Architect;
-var limduClassifier;
+var limduClassifier; //limdu classifier
+var network; //synaptic network
 
 const APP_SECRET = (process.env.MESSENGER_APP_SECRET) ? 
   process.env.MESSENGER_APP_SECRET :
@@ -183,6 +184,11 @@ function receivedMessage(event) {
     var result = toAnswerLimdu(messageText);
     console.log("ҮР ДҮН: "+result);
     sendTextMessage(senderID, result == null ? "Уучлаарай, ойлгомжгүй өгөгдөл байна. :)" : result);
+    
+    //synaptic ээс асуух
+    // var result = toAnswerSynaptic(messageText);
+    // console.log("ҮР ДҮН: "+result);
+    // sendTextMessage(senderID, result == null ? "Уучлаарай, ойлгомжгүй өгөгдөл байна. :)" : result);
   } else if (messageAttachments) {
     sendTextMessage(senderID, "Message with attachment received");
   }
@@ -192,8 +198,8 @@ function readJSON(){
   return JSON.parse(fs.readFileSync('data/training_data.json', 'utf8'));
 }
 //хэлийг судлах with synaptic
-function learnLanguage(jsonWord, text){
-  jsonWord.forEach(function(data){
+function learnWithSynaptic(json){
+  json.forEach(function(data){
     //өгөгдлийн сүлжээг үүсгэж байна
     var inputLayer = new Layer(data.input);
     var hiddenLayer = new Layer(data.input.split(" "));
@@ -202,11 +208,12 @@ function learnLanguage(jsonWord, text){
     inputLayer.project(hiddenLayer);
     hiddenLayer.project(outputLayer);
     
-    var myNetwork = new Network({
+    network = new Network({
     	input: inputLayer,
     	hidden: [hiddenLayer],
     	output: outputLayer
     });    
+    
   });
 }
 
@@ -240,7 +247,7 @@ function toAnswerLimdu(question){
 }
 //synaptic ашиглан хариулах
 function toAnswerSynaptic(question){
-  
+  return network.activate(question);
 }
 
 // текст илгээх
@@ -285,7 +292,8 @@ function callSendAPI(messageData) {
 app.listen(app.get('port'), function() {
   console.log('Bot server is running on port', app.get('port'));
   //learn start here
-  learnWithLimdu(readJSON());//demo сургалт энд хийгдэнэ.
+  learnWithLimdu(readJSON()); //LIMDU demo сургалт энд хийгдэнэ.
+  //learnWithSynaptic(readJSON()); //SYNAPTIC demo сургалт энд хийгдэнэ.
 });
 
 module.exports = app;
