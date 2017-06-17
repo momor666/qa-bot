@@ -18,6 +18,7 @@
     "config": "^1.24.0",
     "express": "^4.14.0",
     "express-session": "^1.14.2",
+    "limdu": "^0.9.3",
     "morgan": "^1.7.0",
     "natural-synaptic": "^1.0.1",
     "path": "^0.12.7",
