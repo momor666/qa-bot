@@ -1,30 +1,28 @@
 'use strict';
 
 const express = require( 'express'),
-    path = require( 'path'),
-
-    morgan = require( 'morgan'),
-    bodyParser = require( 'body-parser'), 
-    config = require( 'config'),
-    crypto = require( 'crypto'),
-    https = require( 'https'),
-    request = require( 'request'),
-    session = require( 'express-session'),
-    synaptic = require( 'synaptic'),
-    NaturalSynaptic = require( 'natural-synaptic');
+      path = require( 'path'),
+      morgan = require( 'morgan'),
+      bodyParser = require( 'body-parser'), 
+      config = require( 'config'),
+      crypto = require( 'crypto'),
+      https = require( 'https'),
+      request = require( 'request'),
+      session = require( 'express-session'),
+      synaptic = require( 'synaptic'),
+      NaturalSynaptic = require( 'natural-synaptic');
 
 const app = express();
+
 app.set('port', process.env.PORT || 5000);
 app.use(morgan('dev'));
 app.use(bodyParser.json({ verify: verifyRequestSignature }));               
 app.use('/', express.static(path.join(__dirname, './../public')));
 
-/* handle error */
 app.use(function(err, req, res, next) {
   console.error(err.stack);
   res.status(500).send('Something broke!');
 });
-
 
 var jsonData = [];
 var Neuron = synaptic.Neuron,
@@ -32,7 +30,6 @@ var Neuron = synaptic.Neuron,
 	Network = synaptic.Network,
 	Trainer = synaptic.Trainer,
 	Architect = synaptic.Architect;
-
 
 const APP_SECRET = (process.env.MESSENGER_APP_SECRET) ? 
   process.env.MESSENGER_APP_SECRET :
@@ -50,7 +47,6 @@ const SERVER_URL = (process.env.SERVER_URL) ?
   (process.env.SERVER_URL) :
   config.get('serverURL');
   
-
 if (!(APP_SECRET && VALIDATION_TOKEN && PAGE_ACCESS_TOKEN && SERVER_URL)) {
   console.error("Missing config values");
   process.exit(1);
@@ -86,13 +82,13 @@ request({
     "setting_type":"greeting",
     "greeting":{
       "text": "Сайн байна уу! Би GREEN ERP бот байна."
+      }
     }
-  }
-}, function(error, response, body) {
-  if (error) {
-    console.log('Error sending message: ', error);
-  } else if (response.body.error) {
-    console.log('Error: ', response.body.error);
+  }, function(error, response, body) {
+    if (error) {
+      console.log('Error sending message: ', error);
+    } else if (response.body.error) {
+      console.log('Error: ', response.body.error);
   }
 });
 
@@ -228,6 +224,7 @@ function learnLang(jsonWord, text){
   return classifier.classify(text);
 }
 
+// текст илгээх
 function sendTextMessage(recipientId, messageText) {
   var messageData = {
     recipient: {
@@ -292,7 +289,7 @@ function isUpperCase(str) {
 }
 
 app.listen(app.get('port'), function() {
-  console.log('Node app is running on port', app.get('port'));
+  console.log('Bot server is running on port', app.get('port'));
 });
 
 module.exports = app;
