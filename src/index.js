@@ -251,7 +251,7 @@ function sendTextMessage(recipientId, messageText) {
     },
     message: {
       text: messageText,
-       cmetadata: "DEVELOPER_DEFINED_METADATA"
+       cmetametadata: "DEVELOPER_DEFINED_METADATA"
     }
   };
 
