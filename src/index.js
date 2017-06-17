@@ -182,8 +182,7 @@ function receivedMessage(event) {
   if (messageText) {
     //limdu ээс асуух
     var result = toAnswerLimdu(messageText);
-    console.log("ҮР ДҮН: "+result);
-    sendTextMessage(senderID, result == null ? "Уучлаарай, ойлгомжгүй өгөгдөл байна. :)" : result);
+    sendTextMessage(senderID, (result == null || result == '') ? "Уучлаарай, ойлгомжгүй өгөгдөл байна. :)" : result+"");
     
     //synaptic ээс асуух
     // var result = toAnswerSynaptic(messageText);
@@ -236,10 +235,10 @@ function learnWithLimdu(json){
   	classifierType: TextClassifier,
   	featureExtractor: WordExtractor
   });
-  
+  console.log("сургалт хийгдэж эхэллээ...")
   // Суралцах туршилт эхлүүлэх
   limduClassifier.trainBatch(json);
-  
+  console.log("сургалт хийгдэж дууслаа.")
 }
 //limdu ашиглан хариулах
 function toAnswerLimdu(question){
@@ -257,8 +256,7 @@ function sendTextMessage(recipientId, messageText) {
       id: recipientId
     },
     message: {
-      text: messageText,
-       cmetametadata: "DEVELOPER_DEFINED_METADATA"
+      text: messageText
     }
   };
 
