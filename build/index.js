@@ -1,7 +1,5 @@
 'use strict';
 
-var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
-
 var _express = require('express');
 
 var _express2 = _interopRequireDefault(_express);
@@ -9,14 +7,6 @@ var _express2 = _interopRequireDefault(_express);
 var _path = require('path');
 
 var _path2 = _interopRequireDefault(_path);
-
-var _webpack = require('webpack');
-
-var _webpack2 = _interopRequireDefault(_webpack);
-
-var _webpackDevServer = require('webpack-dev-server');
-
-var _webpackDevServer2 = _interopRequireDefault(_webpackDevServer);
 
 var _morgan = require('morgan');
 
@@ -61,6 +51,11 @@ var port = process.env.PORT;
 // const port = 3000;
 var devPort = 4000;
 var jsonData = [];
+var Neuron = _synaptic2.default.Neuron,
+    Layer = _synaptic2.default.Layer,
+    Network = _synaptic2.default.Network,
+    Trainer = _synaptic2.default.Trainer,
+    Architect = _synaptic2.default.Architect;
 
 app.use((0, _morgan2.default)('dev'));
 app.use(_bodyParser2.default.json({ verify: verifyRequestSignature }));
@@ -204,37 +199,30 @@ function receivedMessage(event) {
   }
 
   if (messageText) {
-    var obj = getJson();
-    console.log("TYPE: " + _typeof(readJSON()));
-    console.log("AI SIZE: " + readJSON().length);
-    var result = learnLang(obj, messageText);
-    sendTextMessage(senderID, result);
-    //   if (textMatches(messageText, "start")) 
-    //     sendWelcome(senderID);
-    //   else if (textMatches(messageText, "json"))
-    //     sendTextMessage(senderID, getJson());
-    //   else
-    //     sendWelcome(senderID);
+    var result = learnLang(readJSON(), messageText);
+    console.log("ҮР ДҮН: " + result);
+    sendTextMessage(senderID, result == null ? "Уучлаарай, ойлгомжгүй өгөгдөл байна. :)" : result);
+    var arr = ["no", "yes"];
+    if (textMatches(messageText, arr)) console.log("АЖИЛ СДА");else if (textMatches(messageText, "json")) sendTextMessage(senderID, getJson());else console.log("АЖИЛСАНГҮЙ СДА");
   } else if (messageAttachments) {
     sendTextMessage(senderID, "Message with attachment received");
   }
 }
 function readJSON() {
   var fs = require('fs');
-  return JSON.parse(fs.readFileSync('../data/training_data.json', 'utf8'));
+  return JSON.parse(fs.readFileSync('data/training_data.json', 'utf8'));
+}
+function learnLanguage(jsonWord, text) {
+  jsonWord.forEach(function (data) {});
 }
 
 function learnLang(jsonWord, text) {
-  console.log("TYPE: " + (typeof jsonWord === 'undefined' ? 'undefined' : _typeof(jsonWord)));
-  for (var i = 0; i < 10; i++) {
-    console.log(jsonWord[i].input + " <=> " + jsonWord[i].output);
-  }
-  // var classifier = new NaturalSynaptic();
-
-  // classifier.addDocument('my unit-tests failed.', 'software');
-  // classifier.train();
-  // console.log(classifier.classify('did the tests pass?')); // -> software
-  return "GOOD LUCK";
+  var classifier = new _naturalSynaptic2.default();
+  jsonWord.forEach(function (data) {
+    classifier.addDocument(data.input, data.output);
+  });
+  classifier.train();
+  return classifier.classify(text);
 }
 
 function sendTextMessage(recipientId, messageText) {
@@ -273,19 +261,6 @@ function callSendAPI(messageData) {
     }
   });
 }
-
-function getJson() {
-  (0, _request2.default)('https://raw.githubusercontent.com/tortuvshin/qa-bot/master/data/training_data.json?token=AMJgoVeHvRY8A2purPgpcwiho-8xrmWnks5ZTaidwA%3D%3D', function (error, response, body) {
-    if (!error && response.statusCode == 200) {
-      var importedJSON = JSON.parse(body);
-      importedJSON.forEach(function (data) {
-        jsonData.push(data);
-      });
-      return importedJSON;
-    } else console.log('json error');
-  });
-}
-
 function getRandomNumber(minimum, maxmimum) {
   return Math.floor(Math.exp(Math.random() * Math.log(maxmimum - minimum + 1))) + minimum;
 }
@@ -305,6 +280,10 @@ function getRandomItemFromArray(items) {
 
 function logObject(obj) {
   console.log(JSON.stringify(obj, null, 2));
+}
+
+function isUpperCase(str) {
+  return str === str.toUpperCase();
 }
 
 app.listen(port, function () {

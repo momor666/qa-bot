@@ -1,25 +1,22 @@
-import express from 'express';
-import path from 'path';
+'use strict';
 
-import morgan from 'morgan'; 
-import bodyParser from 'body-parser'; 
-import config from 'config';
-import crypto from 'crypto';
-import https from 'https';
-import request from 'request';
-import session from 'express-session';
-import synaptic from 'synaptic';
-import NaturalSynaptic from 'natural-synaptic';
+const express = require( 'express'),
+    path = require( 'path'),
+
+    morgan = require( 'morgan'),
+    bodyParser = require( 'body-parser'), 
+    config = require( 'config'),
+    crypto = require( 'crypto'),
+    https = require( 'https'),
+    request = require( 'request'),
+    session = require( 'express-session'),
+    synaptic = require( 'synaptic'),
+    NaturalSynaptic = require( 'natural-synaptic');
 
 const app = express();
-const port = process.env.PORT;
-// const port = 3000;
-const devPort = 4000;
-var jsonData = [];
-
+app.set('port', process.env.PORT || 5000);
 app.use(morgan('dev'));
 app.use(bodyParser.json({ verify: verifyRequestSignature }));               
-
 app.use('/', express.static(path.join(__dirname, './../public')));
 
 /* handle error */
@@ -27,6 +24,14 @@ app.use(function(err, req, res, next) {
   console.error(err.stack);
   res.status(500).send('Something broke!');
 });
+
+
+var jsonData = [];
+var Neuron = synaptic.Neuron,
+	Layer = synaptic.Layer,
+	Network = synaptic.Network,
+	Trainer = synaptic.Trainer,
+	Architect = synaptic.Architect;
 
 
 const APP_SECRET = (process.env.MESSENGER_APP_SECRET) ? 
@@ -177,11 +182,9 @@ function receivedMessage(event) {
   }
 
   if (messageText) {
-    var obj = getJson();
-    console.log("TYPE: "+(typeof readJSON()));
-    console.log("AI SIZE: "+readJSON().length);
-    var result = learnLang(obj, messageText);
-    sendTextMessage(senderID, result);
+    var result = learnLang(readJSON(), messageText);
+    console.log("ҮР ДҮН: "+result);
+    sendTextMessage(senderID, result == null ? "Уучлаарай, ойлгомжгүй өгөгдөл байна. :)" : result);
   //   if (textMatches(messageText, "start")) 
   //     sendWelcome(senderID);
   //   else if (textMatches(messageText, "json"))
@@ -194,21 +197,35 @@ function receivedMessage(event) {
 }
 function readJSON(){
   var fs = require('fs');
-  return JSON.parse(fs.readFileSync('../data/training_data.json', 'utf8'));
+  return JSON.parse(fs.readFileSync('data/training_data.json', 'utf8'));
+}
+//хэлийг судлах
+function learnLanguage(jsonWord, text){
+  jsonWord.forEach(function(data){
+    //өгөгдлийн сүлжээг үүсгэж байна
+    var inputLayer = new Layer(data.input);
+    var hiddenLayer = new Layer(data.input.split(" "));
+    var outputLayer = new Layer(data.output);
+    
+    inputLayer.project(hiddenLayer);
+    hiddenLayer.project(outputLayer);
+    
+    var myNetwork = new Network({
+    	input: inputLayer,
+    	hidden: [hiddenLayer],
+    	output: outputLayer
+    });    
+  });
 }
 
 function learnLang(jsonWord, text){
-  console.log("TYPE: "+(typeof jsonWord));
-  for(var i=0; i<10; i++){
-    console.log(jsonWord[i].input + " <=> " + jsonWord[i].output);
+  var classifier = new NaturalSynaptic();
+  jsonWord.forEach(function(data){
+    classifier.addDocument(data.input, data.output);
+  });
+    classifier.train();
     
-  }
-  // var classifier = new NaturalSynaptic();
-
-  // classifier.addDocument('my unit-tests failed.', 'software');
-  // classifier.train();
-  // console.log(classifier.classify('did the tests pass?')); // -> software
-  return "GOOD LUCK";
+  return classifier.classify(text);
 }
 
 function sendTextMessage(recipientId, messageText) {
@@ -249,20 +266,6 @@ function callSendAPI(messageData) {
     }
   });  
 }
-
-function getJson() {
-  request('https://raw.githubusercontent.com/tortuvshin/qa-bot/master/data/training_data.json?token=AMJgoVeHvRY8A2purPgpcwiho-8xrmWnks5ZTaidwA%3D%3D', 
-    function (error, response, body) {
-      if (!error && response.statusCode == 200) {
-        var importedJSON = JSON.parse(body);
-        importedJSON.forEach(function(data){
-          jsonData.push(data);
-        });
-        return importedJSON;
-      } else console.log('json error');
-  });
-}
-
 function getRandomNumber(minimum, maxmimum) {
   return Math.floor(Math.exp(Math.random()*Math.log(maxmimum-minimum+1)))+minimum;
 }
@@ -284,6 +287,12 @@ function logObject(obj) {
   console.log(JSON.stringify(obj, null, 2));
 }
 
-app.listen(port, () => {
-    console.log('Express is listening on port', port);
+function isUpperCase(str) {
+  return str === str.toUpperCase();
+}
+
+app.listen(app.get('port'), function() {
+  console.log('Node app is running on port', app.get('port'));
 });
+
+module.exports = app;
