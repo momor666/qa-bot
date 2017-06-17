@@ -205,9 +205,8 @@ function receivedMessage(event) {
 
   if (messageText) {
     var obj = getJson();
-    console.log("TYPE: " + (typeof obj === 'undefined' ? 'undefined' : _typeof(obj)));
-    console.log("AI SIZE: " + jsonData.length);
-    console.log("AI VALUE: " + jsonData[0]);
+    console.log("TYPE: " + _typeof(readJSON()));
+    console.log("AI SIZE: " + readJSON().length);
     var result = learnLang(obj, messageText);
     sendTextMessage(senderID, result);
     //   if (textMatches(messageText, "start")) 
@@ -219,6 +218,10 @@ function receivedMessage(event) {
   } else if (messageAttachments) {
     sendTextMessage(senderID, "Message with attachment received");
   }
+}
+function readJSON() {
+  var fs = require('fs');
+  return JSON.parse(fs.readFileSync('../data/training_data.json', 'utf8'));
 }
 
 function learnLang(jsonWord, text) {

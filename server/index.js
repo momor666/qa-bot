@@ -1,9 +1,6 @@
 import express from 'express';
 import path from 'path';
 
-import webpack from 'webpack';
-import WebpackDevServer from 'webpack-dev-server';
-
 import morgan from 'morgan'; 
 import bodyParser from 'body-parser'; 
 import config from 'config';
@@ -181,8 +178,8 @@ function receivedMessage(event) {
 
   if (messageText) {
     var obj = getJson();
-    console.log("TYPE: "+(typeof obj));
-    console.log("AI SIZE: "+obj.length);
+    console.log("TYPE: "+(typeof readJSON()));
+    console.log("AI SIZE: "+readJSON().length);
     var result = learnLang(obj, messageText);
     sendTextMessage(senderID, result);
   //   if (textMatches(messageText, "start")) 
@@ -197,7 +194,7 @@ function receivedMessage(event) {
 }
 function readJSON(){
   var fs = require('fs');
-  var obj = JSON.parse(fs.readFileSync('file', 'utf8'));
+  return JSON.parse(fs.readFileSync('../data/training_data.json', 'utf8'));
 }
 
 function learnLang(jsonWord, text){
