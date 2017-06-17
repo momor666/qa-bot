@@ -1,5 +1,7 @@
 'use strict';
 
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
 var _express = require('express');
 
 var _express2 = _interopRequireDefault(_express);
@@ -24,9 +26,9 @@ var _bodyParser = require('body-parser');
 
 var _bodyParser2 = _interopRequireDefault(_bodyParser);
 
-var _config2 = require('config');
+var _config = require('config');
 
-var _config3 = _interopRequireDefault(_config2);
+var _config2 = _interopRequireDefault(_config);
 
 var _crypto = require('crypto');
 
@@ -52,16 +54,13 @@ var _naturalSynaptic = require('natural-synaptic');
 
 var _naturalSynaptic2 = _interopRequireDefault(_naturalSynaptic);
 
-var _fs = require('fs');
-
-var _fs2 = _interopRequireDefault(_fs);
-
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var app = (0, _express2.default)();
 var port = process.env.PORT;
 // const port = 3000;
 var devPort = 4000;
+var jsonData = [];
 
 app.use((0, _morgan2.default)('dev'));
 app.use(_bodyParser2.default.json({ verify: verifyRequestSignature }));
@@ -74,13 +73,13 @@ app.use(function (err, req, res, next) {
   res.status(500).send('Something broke!');
 });
 
-var APP_SECRET = process.env.MESSENGER_APP_SECRET ? process.env.MESSENGER_APP_SECRET : _config3.default.get('appSecret');
+var APP_SECRET = process.env.MESSENGER_APP_SECRET ? process.env.MESSENGER_APP_SECRET : _config2.default.get('appSecret');
 
-var VALIDATION_TOKEN = process.env.MESSENGER_VALIDATION_TOKEN ? process.env.MESSENGER_VALIDATION_TOKEN : _config3.default.get('validationToken');
+var VALIDATION_TOKEN = process.env.MESSENGER_VALIDATION_TOKEN ? process.env.MESSENGER_VALIDATION_TOKEN : _config2.default.get('validationToken');
 
-var PAGE_ACCESS_TOKEN = process.env.MESSENGER_PAGE_ACCESS_TOKEN ? process.env.MESSENGER_PAGE_ACCESS_TOKEN : _config3.default.get('pageAccessToken');
+var PAGE_ACCESS_TOKEN = process.env.MESSENGER_PAGE_ACCESS_TOKEN ? process.env.MESSENGER_PAGE_ACCESS_TOKEN : _config2.default.get('pageAccessToken');
 
-var SERVER_URL = process.env.SERVER_URL ? process.env.SERVER_URL : _config3.default.get('serverURL');
+var SERVER_URL = process.env.SERVER_URL ? process.env.SERVER_URL : _config2.default.get('serverURL');
 
 if (!(APP_SECRET && VALIDATION_TOKEN && PAGE_ACCESS_TOKEN && SERVER_URL)) {
   console.error("Missing config values");
@@ -205,25 +204,34 @@ function receivedMessage(event) {
   }
 
   if (messageText) {
-    if (textMatches(messageText, "start")) sendWelcome(senderID);else if (textMatches(messageText, "json")) sendTextMessage(senderID, getJson());else sendWelcome(senderID);
+    var obj = getJson();
+    console.log("TYPE: " + (typeof obj === 'undefined' ? 'undefined' : _typeof(obj)));
+    console.log("AI SIZE: " + jsonData.length);
+    console.log("AI VALUE: " + jsonData[0]);
+    var result = learnLang(obj, messageText);
+    sendTextMessage(senderID, result);
+    //   if (textMatches(messageText, "start")) 
+    //     sendWelcome(senderID);
+    //   else if (textMatches(messageText, "json"))
+    //     sendTextMessage(senderID, getJson());
+    //   else
+    //     sendWelcome(senderID);
   } else if (messageAttachments) {
     sendTextMessage(senderID, "Message with attachment received");
   }
 }
 
-function sendWelcome(recipientId) {
-  (0, _request2.default)({
-    url: 'https://graph.facebook.com/v2.9/' + recipientId + '?access_token=' + PAGE_ACCESS_TOKEN
-  }, function (error, response, body) {
-    if (error || response.statusCode != 200) return;
+function learnLang(jsonWord, text) {
+  console.log("TYPE: " + (typeof jsonWord === 'undefined' ? 'undefined' : _typeof(jsonWord)));
+  for (var i = 0; i < 10; i++) {
+    console.log(jsonWord[i].input + " <=> " + jsonWord[i].output);
+  }
+  // var classifier = new NaturalSynaptic();
 
-    var fbProfileBody = JSON.parse(body);
-    var userName = fbProfileBody["first_name"];
-    var greetings = ["Hey", "Hello", "Bonjur", "Good Evening", "Good Morning", "What's up", "Сайн уу", "юу байна", "сайн уу"];
-    var randomGreeting = getRandomItemFromArray(greetings);
-    var welcomeMsg = randomGreeting + ' ' + userName + ', \nGreen ERP \u0441\u0438\u0441\u0442\u0435\u043C\u0442\u044D\u0439 \u0445\u043E\u043B\u0431\u043E\u043E\u0442\u043E\u0439 \u0430\u0441\u0443\u0443\u0445 \u0437\u04AF\u0439\u043B\u044D\u044D \u0431\u0438\u0447\u043D\u044D \u04AF\u04AF.\n\xAF\\_(\u30C4)_/\xAF .\n      ';
-    sendTextMessage(recipientId, welcomeMsg);
-  });
+  // classifier.addDocument('my unit-tests failed.', 'software');
+  // classifier.train();
+  // console.log(classifier.classify('did the tests pass?')); // -> software
+  return "GOOD LUCK";
 }
 
 function sendTextMessage(recipientId, messageText) {
@@ -264,10 +272,12 @@ function callSendAPI(messageData) {
 }
 
 function getJson() {
-  (0, _request2.default)('https://raw.githubusercontent.com/tortuvshin/memorize-bot/green/data/training_data.json?token=AMJgoarQ33ctfM2eT5e2jHq7jCzTUkq5ks5ZTYD2wA%3D%3D', function (error, response, body) {
+  (0, _request2.default)('https://raw.githubusercontent.com/tortuvshin/qa-bot/master/data/training_data.json?token=AMJgoVeHvRY8A2purPgpcwiho-8xrmWnks5ZTaidwA%3D%3D', function (error, response, body) {
     if (!error && response.statusCode == 200) {
       var importedJSON = JSON.parse(body);
-      console.log(importedJSON);
+      importedJSON.forEach(function (data) {
+        jsonData.push(data);
+      });
       return importedJSON;
     } else console.log('json error');
   });
@@ -297,13 +307,3 @@ function logObject(obj) {
 app.listen(port, function () {
   console.log('Express is listening on port', port);
 });
-
-if (process.env.NODE_ENV == 'development') {
-  console.log('Server is running on development mode');
-  var _config = require('../webpack.dev.config');
-  var compiler = (0, _webpack2.default)(_config);
-  var devServer = new _webpackDevServer2.default(compiler, _config.devServer);
-  devServer.listen(devPort, function () {
-    console.log('webpack-dev-server is listening on port', devPort);
-  });
-}

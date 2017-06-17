@@ -12,13 +12,13 @@ import https from 'https';
 import request from 'request';
 import session from 'express-session';
 import synaptic from 'synaptic';
-import naturalSynaptic from 'natural-synaptic';
-import fs from 'fs';
+import NaturalSynaptic from 'natural-synaptic';
 
 const app = express();
 const port = process.env.PORT;
 // const port = 3000;
 const devPort = 4000;
+var jsonData = [];
 
 app.use(morgan('dev'));
 app.use(bodyParser.json({ verify: verifyRequestSignature }));               
@@ -180,36 +180,38 @@ function receivedMessage(event) {
   }
 
   if (messageText) {
-    if (textMatches(messageText, "start")) 
-      sendWelcome(senderID);
-    else if (textMatches(messageText, "json"))
-      sendTextMessage(senderID, getJson());
-    else
-      sendWelcome(senderID);
+    var obj = getJson();
+    console.log("TYPE: "+(typeof obj));
+    console.log("AI SIZE: "+obj.length);
+    var result = learnLang(obj, messageText);
+    sendTextMessage(senderID, result);
+  //   if (textMatches(messageText, "start")) 
+  //     sendWelcome(senderID);
+  //   else if (textMatches(messageText, "json"))
+  //     sendTextMessage(senderID, getJson());
+  //   else
+  //     sendWelcome(senderID);
   } else if (messageAttachments) {
     sendTextMessage(senderID, "Message with attachment received");
   }
 }
+function readJSON(){
+  var fs = require('fs');
+  var obj = JSON.parse(fs.readFileSync('file', 'utf8'));
+}
 
-function sendWelcome(recipientId) {
-  request({
-      url: 'https://graph.facebook.com/v2.9/' + recipientId 
-        + '?access_token=' + PAGE_ACCESS_TOKEN
-    },
-    function (error, response, body) {
-      if (error || response.statusCode != 200) return;
+function learnLang(jsonWord, text){
+  console.log("TYPE: "+(typeof jsonWord));
+  for(var i=0; i<10; i++){
+    console.log(jsonWord[i].input + " <=> " + jsonWord[i].output);
     
-      var fbProfileBody = JSON.parse(body);
-      var userName = fbProfileBody["first_name"];
-      var greetings = ["Hey", "Hello", "Good Evening", "Good Morning", "What's up", "Сайн уу","юу байна", "сайн уу"];
-      var randomGreeting = getRandomItemFromArray(greetings);
-      var welcomeMsg = `${randomGreeting} ${userName}, 
-Green ERP системтэй холбоотой асуух зүйлээ бичнэ үү.
-¯\\_(ツ)_/¯ .
-      `;
-      sendTextMessage(recipientId, welcomeMsg);
-    }
-  );
+  }
+  // var classifier = new NaturalSynaptic();
+
+  // classifier.addDocument('my unit-tests failed.', 'software');
+  // classifier.train();
+  // console.log(classifier.classify('did the tests pass?')); // -> software
+  return "GOOD LUCK";
 }
 
 function sendTextMessage(recipientId, messageText) {
@@ -252,14 +254,16 @@ function callSendAPI(messageData) {
 }
 
 function getJson() {
-  request('https://raw.githubusercontent.com/tortuvshin/memorize-bot/green/data/training_data.json?token=AMJgoarQ33ctfM2eT5e2jHq7jCzTUkq5ks5ZTYD2wA%3D%3D', 
+  request('https://raw.githubusercontent.com/tortuvshin/qa-bot/master/data/training_data.json?token=AMJgoVeHvRY8A2purPgpcwiho-8xrmWnks5ZTaidwA%3D%3D', 
     function (error, response, body) {
       if (!error && response.statusCode == 200) {
         var importedJSON = JSON.parse(body);
-        console.log(importedJSON);
+        importedJSON.forEach(function(data){
+          jsonData.push(data);
+        });
         return importedJSON;
       } else console.log('json error');
-  })
+  });
 }
 
 function getRandomNumber(minimum, maxmimum) {
@@ -286,15 +290,3 @@ function logObject(obj) {
 app.listen(port, () => {
     console.log('Express is listening on port', port);
 });
-
-if(process.env.NODE_ENV == 'development') {
-    console.log('Server is running on development mode');
-    const config = require('../webpack.dev.config');
-    const compiler = webpack(config);
-    const devServer = new WebpackDevServer(compiler, config.devServer);
-    devServer.listen(
-        devPort, () => {
-            console.log('webpack-dev-server is listening on port', devPort);
-        }
-    );
-}
