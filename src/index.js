@@ -30,7 +30,8 @@ var Neuron = synaptic.Neuron,
   	Network = synaptic.Network,
   	Trainer = synaptic.Trainer,
   	Architect = synaptic.Architect;
-var limduClassifier;
+var limduClassifier; //limdu classifier
+var network; //synaptic network
 
 const APP_SECRET = (process.env.MESSENGER_APP_SECRET) ? 
   process.env.MESSENGER_APP_SECRET :
@@ -180,41 +181,131 @@ function receivedMessage(event) {
 
   if (messageText) {
     //limdu ээс асуух
-    var result = toAnswerLimdu(messageText);
-    console.log("ҮР ДҮН: "+result);
-    sendTextMessage(senderID, result == null ? "Уучлаарай, ойлгомжгүй өгөгдөл байна. :)" : result);
+    var result = toAnswerByLimdu(messageText);
+    
+    //Хэрэглэгчийн хайсан өгөгдөл олдсон эсэх
+    if(result == null || result == ''){
+      sendTextMessage(senderID, "Уучлаарай, i-STAR -ын судалж амжаагүй эсвэл хэтэрхий ерөнхий асуулт байна.");
+      // askMore(senderID, messageText);
+    }
+    else if (messageText == "update"){
+      sendTextMessage(senderID, updateJSON());
+    }else
+      sendTextMessage(senderID, result+"");
+    
   } else if (messageAttachments) {
     sendTextMessage(senderID, "Message with attachment received");
   }
 }
+//хэрэглэгчийн хайсан өгөгдөл олдохгүй бол тодруулга авч дэлгэрүүлж хайх
+function askMore(senderID, messageText){
+      var similarWords = findSimilarKeyword(messageText);
+      if(similarWords.length != 0){
+        sendTextMessage(senderID, "Дараах түлхүүр үгүүдээс сонгоно уу");
+        sendTextMessage(senderID, similarWords);
+        // askSimilarOptions(senderID, similarWords);
+      }
+      else
+        sendTextMessage(senderID, "Таны хайсан өгөгдөл олдсонгүй!");
+}
+//хайсан өгөгдөлийн хариулт олдоогүй үед төстэй асуултуудыг олох
+function findSimilarKeyword(keyword){
+  //хөрш үгнүүдийг array-д авч сонголт болгон илгээх
+  var similarQuestions = new Array();
+  var sum = "";
+  readJSON().forEach(function(data){
+    var words = data.input.split(" ");
+    //тухайн түлхүүр үгээр эхэлсэн эсвэл түүнтэй хөрш үгнүүдийг олох
+    if(words.indexOf(keyword) != -1){
+      var index = words.indexOf(keyword);
+      //тухайн үгтэй хөрш үгийг авах
+      var neighborWord = index == words.length ? words[index-1]+" "+keyword : keyword+" "+words[index+1];
+      //тухайн үг өмнө нь бүртгэгдээгүй бол
+      if(sum.indexOf(neighborWord)==-1)
+        sum+= sum=="" ? neighborWord : ","+neighborWord;
+      similarQuestions.push({"content_type":"text","title":neighborWord});
+    }
+  });
+    return sum;
+}
+//төстэй үгнүүдээс санал болгож асуух
+function askSimilarOptions(recipientId, words){
+  var messageData = {
+    recipient: {
+      id: recipientId
+    },
+    message: {
+      text: "Таны хайлт хэт ерөнхий байгаа тул, дараах сонголтуудаас сонгоно уу.",
+      quick_replies: words
+    }
+  };
+
+  callSendAPI(messageData);
+}
+//json файлаас өгөгдөл унших
 function readJSON(){
   var fs = require('fs');
   return JSON.parse(fs.readFileSync('data/training_data.json', 'utf8'));
 }
+//json файл шинэчлэх
+function updateJSON(){
+  var fs = require('fs');
+  var fileName = 'data/demo_data.json';
+  var file = require(fileName);
+  
+  file.key = "";
+  
+  fs.writeFile(fileName, JSON.stringify(file), function (err) {
+    if (err) return console.log(err);
+    console.log(JSON.stringify(file));
+    console.log('шинэ мэдээлэл нэмэгдсэн ' + fileName);
+  });  
+}
+//илүү тэмдэгтүүдийг цэвэрлэх
+function cleanJSON(json){
+  for(var i=0; i<json.length; i++){
+    json[i].input = json[i].input.replace("/[\?\,\:]/", "");
+  }
+}
 //хэлийг судлах with synaptic
-function learnLanguage(jsonWord, text){
-  jsonWord.forEach(function(data){
+function learnWithSynaptic(json){
+  console.log("synaptic суралцаж эхэллээ...");
+  json.forEach(function(data){
     //өгөгдлийн сүлжээг үүсгэж байна
     var inputLayer = new Layer(data.input);
-    var hiddenLayer = new Layer(data.input.split(" "));
+    //Асуулт болон хариултын үгсийн олонлогийг нэгтгэх
+    var mergedWords = data.input.split(" ").concat(data.output.split(" "));
+    var hiddenLayer = new Layer(mergedWords);
     var outputLayer = new Layer(data.output);
     
     inputLayer.project(hiddenLayer);
     hiddenLayer.project(outputLayer);
     
-    var myNetwork = new Network({
-    	input: inputLayer,
-    	hidden: [hiddenLayer],
-    	output: outputLayer
-    });    
+    if(network == null)
+      network = new Network({
+      	input: inputLayer,
+      	hidden: [hiddenLayer],
+      	output: outputLayer
+      });
+    else
+      network.project(
+        new Network({
+        	input: inputLayer,
+        	hidden: [hiddenLayer],
+        	output: outputLayer
+    }));
+    
   });
+  console.log("synaptic суралцаж дууслаа.");
 }
 
 // limdu ээр хэлийг судлах
 function learnWithLimdu(json){
+  console.log("limdu суралцаж эхэллээ...");
+  var startedTime = new Date().getTime();
   // Олон түвшингээр давтан суралцах
   var TextClassifier = limdu.classifiers.multilabel.BinaryRelevance.bind(0, {
-  	binaryClassifierType: limdu.classifiers.Winnow.bind(0, {retrain_count: 10})
+  	binaryClassifierType: limdu.classifiers.Winnow.bind(0, {retrain_count: 100})
   });
   
   // Өгүүлбэрт буй үгнүүдийг хоосон зайгаар нь салгаж аван шинж чанарууд үүсгэх
@@ -229,18 +320,23 @@ function learnWithLimdu(json){
   	classifierType: TextClassifier,
   	featureExtractor: WordExtractor
   });
-  
   // Суралцах туршилт эхлүүлэх
   limduClassifier.trainBatch(json);
-  
+  console.log("limdu суралцаж дууслаа. \n Нийт "+json.length + " ширхэг өгөдлийг " + (new Date().getTime()-startedTime)/1000+" секундэд уншиж дууслаа.");
 }
 //limdu ашиглан хариулах
-function toAnswerLimdu(question){
-  return limduClassifier.classify(question);
+function toAnswerByLimdu(question){
+  console.log("limdu хариултыг хайж байна...");
+  var result =  limduClassifier.classify(question);
+  console.log("limdu хариултыг оллоо.");
+  return result;
 }
 //synaptic ашиглан хариулах
-function toAnswerSynaptic(question){
-  
+function toAnswerBySynaptic(question){
+  console.log("synaptic хариултыг хайж байна...");
+  var result =  network.activate(question);
+  console.log("synaptic хариултыг оллоо.");
+  return result;
 }
 
 // текст илгээх
@@ -250,8 +346,7 @@ function sendTextMessage(recipientId, messageText) {
       id: recipientId
     },
     message: {
-      text: messageText,
-       cmetametadata: "DEVELOPER_DEFINED_METADATA"
+      text: messageText
     }
   };
 
@@ -285,7 +380,8 @@ function callSendAPI(messageData) {
 app.listen(app.get('port'), function() {
   console.log('Bot server is running on port', app.get('port'));
   //learn start here
-  learnWithLimdu(readJSON());//demo сургалт энд хийгдэнэ.
+  learnWithLimdu(readJSON()); //LIMDU demo сургалт энд хийгдэнэ.
+  // learnWithSynaptic(readJSON()); //SYNAPTIC demo сургалт энд хийгдэнэ.
 });
 
 module.exports = app;
