@@ -187,9 +187,6 @@ function receivedMessage(event) {
     if(result == null || result == ''){
       sendTextMessage(senderID, "Уучлаарай, i-STAR -ын судалж амжаагүй эсвэл хэтэрхий ерөнхий асуулт байна.");
       // askMore(senderID, messageText);
-    }
-    else if (messageText == "update"){
-      sendTextMessage(senderID, updateJSON());
     }else
       sendTextMessage(senderID, result+"");
     
@@ -245,22 +242,9 @@ function askSimilarOptions(recipientId, words){
 //json файлаас өгөгдөл унших
 function readJSON(){
   var fs = require('fs');
-  return JSON.parse(fs.readFileSync('data/training_data.json', 'utf8'));
+  return JSON.parse(fs.readFileSync('data/demo_data.json', 'utf8'));
 }
-//json файл шинэчлэх
-function updateJSON(){
-  var fs = require('fs');
-  var fileName = 'data/demo_data.json';
-  var file = require(fileName);
-  
-  file.key = "";
-  
-  fs.writeFile(fileName, JSON.stringify(file), function (err) {
-    if (err) return console.log(err);
-    console.log(JSON.stringify(file));
-    console.log('шинэ мэдээлэл нэмэгдсэн ' + fileName);
-  });  
-}
+
 //илүү тэмдэгтүүдийг цэвэрлэх
 function cleanJSON(json){
   for(var i=0; i<json.length; i++){
